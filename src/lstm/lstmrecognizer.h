@@ -42,6 +42,7 @@ namespace tesseract {
 
 class Dict;
 class ImageData;
+class LoresImage;
 
 // Enum indicating training mode control flags.
 enum TrainingFlags {
@@ -174,7 +175,8 @@ class LSTMRecognizer {
   // produce a good enough result. The line_box is used for computing the
   // box_word in the output words. worst_dict_cert is the worst certainty that
   // will be used in a dictionary word.
-  void RecognizeLine(const ImageData& image_data, bool invert, bool debug,
+  void RecognizeLine(const ImageData& image_data, const LoresImage* const lores,
+                     bool invert, bool debug,
                      double worst_dict_cert, const TBOX& line_box,
                      PointerVector<WERD_RES>* words, int lstm_choice_mode = 0);
 
@@ -190,7 +192,9 @@ class LSTMRecognizer {
   // improve the results. This ensures that outputs contains the correct
   // forward outputs for the best photometric interpretation.
   // inputs is filled with the used inputs to the network.
-  bool RecognizeLine(const ImageData& image_data, bool invert, bool debug,
+  bool RecognizeLine(const ImageData& image_data,
+                     const LoresImage* const lores, const TBOX& line_box,
+                     bool invert, bool debug,
                      bool re_invert, bool upside_down, float* scale_factor,
                      NetworkIO* inputs, NetworkIO* outputs);
 

@@ -35,6 +35,7 @@
 #include "docqual.h"                // for GARBAGE_LEVEL
 #endif
 #include "genericvector.h"          // for GenericVector, PointerVector
+#include "lores.h"                  // for LoresImage
 #include "pageres.h"                // for WERD_RES (ptr only), PAGE_RES (pt...
 #include "params.h"                 // for BOOL_VAR_H, BoolParam, DoubleParam
 #include "points.h"                 // for FCOORD
@@ -222,6 +223,10 @@ class Tesseract : public Wordrec {
                                                    : nullptr);
     }
   }
+  // Creates and sets up lores_.  Returns a scaled image, which must be
+  // pixDestroyed after use.
+  Pix* set_lores_image(Pix* image);
+
   // Returns a pointer to a Pix representing the best available resolution image
   // of the page, with best available bit depth as second priority. Result can
   // be of any bit depth, but never color-mapped, as that has always been
@@ -1087,6 +1092,20 @@ class Tesseract : public Wordrec {
             "character. ");
   BOOL_VAR_H(pageseg_apply_music_mask, true,
              "Detect music staff and remove intersecting components");
+  BOOL_VAR_H(low_resolution_input, false,
+             "The input image is low resolution (lores)");
+  INT_VAR_H(low_resolution_dpi, 0,
+	    "Resolution of lores input image. "
+	    "user_defined_dpi is the desired target resolution. ");
+  INT_VAR_H(low_resolution_scaling, 0,
+	    "The form of scaling used to enlarge lores images. "
+            "Valid input values are 0, 1 and 2. 2 is the default value. "
+            "With 0, the scaling is box. "
+            "With 1, the scaling is bilinear. "
+            "With 2, the scaling is bicubic. ");
+  double_VAR_H(low_resolution_blurring, 0.0,
+	       "The standard deviation (in pixels of enlarged image) of "
+	       "Gaussian blur to be applied to lores images after scaling. ");
 
   //// ambigsrecog.cpp /////////////////////////////////////////////////////////
   FILE* init_recog_training(const STRING& fname);
@@ -1110,6 +1129,8 @@ class Tesseract : public Wordrec {
   Pix* pix_grey_;
   // Original input image. Color if the input was color.
   Pix* pix_original_;
+  // Low-resolution image information if the input was lores, otherwise nullptr.
+  LoresImage* lores_;
   // Thresholds that were used to generate the thresholded image from grey.
   Pix* pix_thresholds_;
   // Debug images. If non-empty, will be written on destruction.

@@ -32,6 +32,7 @@ struct Pix;
 namespace tesseract {
 
 class TFile;
+class LoresImage;
 
 // Amount of padding to apply in output pixels in feature mode.
 const int kFeaturePadding = 2;
@@ -170,7 +171,9 @@ class ImageData {
   // to the image to achieve the target_height.
   Pix* PreScale(int target_height, int max_height, float* scale_factor,
                 int* scaled_width, int* scaled_height,
-                GenericVector<TBOX>* boxes) const;
+                GenericVector<TBOX>* boxes,
+                const LoresImage* const lores,
+                const TBOX& line_box) const;
 
   int MemoryUsed() const;
 

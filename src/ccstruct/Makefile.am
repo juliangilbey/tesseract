@@ -22,7 +22,7 @@ noinst_HEADERS = \
     ccstruct.h coutln.h crakedge.h \
     debugpixa.h detlinefit.h dppoint.h \
     imagedata.h \
-    linlsq.h matrix.h mod128.h normalis.h \
+    linlsq.h lores.h matrix.h mod128.h normalis.h \
     ocrblock.h ocrpara.h ocrrow.h otsuthr.h \
     pageres.h \
     pdblock.h points.h polyaprx.h polyblk.h \
@@ -40,7 +40,7 @@ libtesseract_ccstruct_la_SOURCES = \
     blamer.cpp blobbox.cpp blobs.cpp blread.cpp boxread.cpp boxword.cpp ccstruct.cpp coutln.cpp \
     detlinefit.cpp dppoint.cpp \
     imagedata.cpp \
-    linlsq.cpp matrix.cpp mod128.cpp normalis.cpp \
+    linlsq.cpp lores.cpp matrix.cpp mod128.cpp normalis.cpp \
     ocrblock.cpp ocrpara.cpp ocrrow.cpp otsuthr.cpp \
     pageres.cpp pdblock.cpp points.cpp polyaprx.cpp polyblk.cpp \
     publictypes.cpp \

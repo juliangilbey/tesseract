@@ -611,8 +611,17 @@ void TessBaseAPI::SetImage(Pix* pix) {
       (void)pixCopy(pix, p1);
       pixDestroy(&p1);
     }
-    thresholder_->SetImage(pix);
-    SetInputImage(thresholder_->GetPixRect());
+    if (tesseract_->low_resolution_input) {
+      Pix *scaled_image = tesseract_->set_lores_image(pix);
+      if (scaled_image) {
+	thresholder_->SetImage(scaled_image);
+	SetInputImage(thresholder_->GetPixRect());
+	pixDestroy(&scaled_image);
+      }
+    } else {
+      thresholder_->SetImage(pix);
+      SetInputImage(thresholder_->GetPixRect());
+    }
   }
 }
 

@@ -515,11 +515,28 @@ Tesseract::Tesseract()
           this->params()),
       BOOL_MEMBER(pageseg_apply_music_mask, true,
                 "Detect music staff and remove intersecting components", this->params()),
+      BOOL_MEMBER(low_resolution_input, false,
+                  "The input image is low resolution (lores)", this->params()),
+      INT_MEMBER(low_resolution_dpi, 0,
+                 "Resolution of lores input image. "
+                 "user_defined_dpi is the desired target resolution. ",
+                 this->params()),
+      INT_MEMBER(low_resolution_scaling, 0,
+                 "The form of scaling used to enlarge lores images. "
+                 "Valid input values are 0, 1 and 2. 2 is the default value. "
+                 "With 0, the scaling is box. "
+                 "With 1, the scaling is bilinear. "
+                 "With 2, the scaling is bicubic. ", this->params()),
+      double_MEMBER(low_resolution_blurring, 0.0,
+          "The standard deviation (in pixels of enlarged image) of "
+          "Gaussian blur to be applied to lores images after scaling. ",
+          this->params()),
 
       backup_config_file_(nullptr),
       pix_binary_(nullptr),
       pix_grey_(nullptr),
       pix_original_(nullptr),
+      lores_(nullptr),
       pix_thresholds_(nullptr),
       source_resolution_(0),
       textord_(this),
@@ -574,6 +591,10 @@ void Tesseract::Clear() {
   scaled_factor_ = -1;
   for (int i = 0; i < sub_langs_.size(); ++i)
     sub_langs_[i]->Clear();
+  if (lores_ != nullptr) {
+    delete lores_;
+    lores_ = nullptr;
+  }
 }
 
 #ifndef DISABLED_LEGACY_ENGINE
@@ -592,6 +613,51 @@ void Tesseract::ResetAdaptiveClassifier() {
 }
 
 #endif  //ndef DISABLED_LEGACY_ENGINE
+
+// Creates and sets up lores_.  Returns a scaled image, which must be
+// pixDestroyed after use.
+Pix* Tesseract::set_lores_image(Pix* image) {
+  if (user_defined_dpi && (user_defined_dpi < kMinCredibleResolution ||
+                           user_defined_dpi > kMaxCredibleResolution)) {
+    tprintf("Warning: desired target resolution (--dpi or user_defined_dpi)"
+            " is outside of expected range (%d - %d)!\n"
+            "Giving up.\n",
+            kMinCredibleResolution, kMaxCredibleResolution);
+    return nullptr;
+  } else if (!user_defined_dpi) {
+    tprintf("Warning: desired recognition resolution "
+            "(--dpi or user_defined_dpi) is unspecified!\n"
+            "Giving up.\n");
+    return nullptr;
+  }
+  
+  if (low_resolution_dpi && low_resolution_dpi < kMinCredibleLoresResolution) {
+    tprintf("Warning: low_resolution_dpi is below the expected range "
+            "(>= %d)!\n"
+            "Giving up.\n",
+            kMinCredibleLoresResolution);
+    return nullptr;
+  } else if (!low_resolution_dpi) {
+    tprintf("Warning: low_resolution_dpi has not been specified!\n"
+            "Giving up.\n");
+    return nullptr;
+  }
+
+  int32_t lores_scaling = low_resolution_scaling;  // extract from params
+  lores_ = new LoresImage(image, low_resolution_dpi, user_defined_dpi,
+                          LoresScalingMethod(lores_scaling),
+                          low_resolution_blurring);
+
+  Pix *scaled_image = lores_->GetFullScaledImage();
+  if (scaled_image == nullptr) {
+    tprintf("Warning: scaling low resolution image failed!\n"
+            "Giving up.\n");
+    delete lores_;
+    return nullptr;
+  }
+
+  return scaled_image;
+}
 
 // Clear the document dictionary for this and all subclassifiers.
 void Tesseract::ResetDocumentDictionary() {

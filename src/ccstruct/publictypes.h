@@ -38,6 +38,8 @@ constexpr int kPointsPerInch = 72;
 constexpr int kMinCredibleResolution = 70;
 /** Maximum believable resolution.  */
 constexpr int kMaxCredibleResolution = 2400;
+/** Minimum believable low-resolution image resolution */
+constexpr int kMinCredibleLoresResolution = 50;
 /**
  * Ratio between median blob size and likely resolution. Used to estimate
  * resolution when none is provided. This is basically 1/usual text size in

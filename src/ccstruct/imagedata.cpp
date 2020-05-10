@@ -33,6 +33,7 @@
 #include "boxread.h"     // for ReadMemBoxes
 #include "callcpp.h"     // for window_wait
 #include "helpers.h"     // for IntCastRounded, TRand, ClipToRange, Modulo
+#include "lores.h"       // for LoresImage
 #include "rect.h"        // for TBOX
 #include "scrollview.h"  // for ScrollView, ScrollView::CYAN, ScrollView::NONE
 #include "serialis.h"    // for TFile
@@ -227,7 +228,9 @@ Pix* ImageData::GetPix() const {
 // to the image to achieve the target_height.
 Pix* ImageData::PreScale(int target_height, int max_height, float* scale_factor,
                          int* scaled_width, int* scaled_height,
-                         GenericVector<TBOX>* boxes) const {
+                         GenericVector<TBOX>* boxes,
+                         const LoresImage* const lores,
+                         const TBOX& line_box) const {
   int input_width = 0;
   int input_height = 0;
   Pix* src_pix = GetPix();
@@ -242,8 +245,12 @@ Pix* ImageData::PreScale(int target_height, int max_height, float* scale_factor,
     *scaled_width = IntCastRounded(im_factor * input_width);
   if (scaled_height != nullptr)
     *scaled_height = target_height;
-  // Get the scaled image.
-  Pix* pix = pixScale(src_pix, im_factor, im_factor);
+  // Get the scaled image, using lores if it is non-null.
+  Pix* pix;
+  if (lores)
+    pix = lores->GetScaledImageBox(target_height, line_box);
+  else
+    pix = pixScale(src_pix, im_factor, im_factor);
   if (pix == nullptr) {
     tprintf("Scaling pix of size %d, %d by factor %g made null pix!!\n",
             input_width, input_height, im_factor);

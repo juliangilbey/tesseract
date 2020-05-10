@@ -181,7 +181,12 @@ bool LSTMRecognizer::LoadDictionary(const ParamsVectors* params,
 
 // Recognizes the line image, contained within image_data, returning the
 // ratings matrix and matching box_word for each WERD_RES in the output.
-void LSTMRecognizer::RecognizeLine(const ImageData& image_data, bool invert,
+// It is unfortunate that we need to pass the LoresImage directly to
+// this function, but we need to be able to process a portion of the
+// original lores image if we are dealing with a low resolution image.
+// This will be nullptr if we are not.
+void LSTMRecognizer::RecognizeLine(const ImageData& image_data,
+                                   const LoresImage* const lores, bool invert,
                                    bool debug, double worst_dict_cert,
                                    const TBOX& line_box,
                                    PointerVector<WERD_RES>* words,
@@ -189,7 +194,8 @@ void LSTMRecognizer::RecognizeLine(const ImageData& image_data, bool invert,
   NetworkIO outputs;
   float scale_factor;
   NetworkIO inputs;
-  if (!RecognizeLine(image_data, invert, debug, false, false, &scale_factor,
+  if (!RecognizeLine(image_data, lores, line_box, invert, debug,
+                     false, false, &scale_factor,
                      &inputs, &outputs))
     return;
   if (search_ == nullptr) {
@@ -229,7 +235,9 @@ void LSTMRecognizer::OutputStats(const NetworkIO& outputs, float* min_output,
 
 // Recognizes the image_data, returning the labels,
 // scores, and corresponding pairs of start, end x-coords in coords.
-bool LSTMRecognizer::RecognizeLine(const ImageData& image_data, bool invert,
+bool LSTMRecognizer::RecognizeLine(const ImageData& image_data,
+                                   const LoresImage* const lores,
+                                   const TBOX& line_box, bool invert,
                                    bool debug, bool re_invert, bool upside_down,
                                    float* scale_factor, NetworkIO* inputs,
                                    NetworkIO* outputs) {
@@ -238,7 +246,8 @@ bool LSTMRecognizer::RecognizeLine(const ImageData& image_data, bool invert,
   // This ensures consistent recognition results.
   SetRandomSeed();
   int min_width = network_->XScaleFactor();
-  Pix* pix = Input::PrepareLSTMInputs(image_data, network_, min_width,
+  Pix* pix = Input::PrepareLSTMInputs(image_data, lores, line_box,
+                                      network_, min_width,
                                       &randomizer_, scale_factor);
   if (pix == nullptr) {
     tprintf("Line cannot be recognized!!\n");

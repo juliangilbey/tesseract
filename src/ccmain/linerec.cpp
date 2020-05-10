@@ -246,7 +246,8 @@ void Tesseract::LSTMRecognizeWord(const BLOCK& block, ROW *row, WERD_RES *word,
   if (im_data == nullptr) return;
 
   bool do_invert = tessedit_do_invert;
-  lstm_recognizer_->RecognizeLine(*im_data, do_invert, classify_debug_level > 0,
+  lstm_recognizer_->RecognizeLine(*im_data, lores_,
+                                  do_invert, classify_debug_level > 0,
                                   kWorstDictCertainty / kCertaintyScale,
                                   word_box, words, lstm_choice_mode);
   delete im_data;

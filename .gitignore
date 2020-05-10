@@ -100,6 +100,8 @@ kernel*.bin
 /tests/.dirstamp
 /unittest/*.trs
 /unittest/tmp/*
+/unittest/third_party/*
+/unittest/util/*
 
 # test programs
 /unittest/*_test

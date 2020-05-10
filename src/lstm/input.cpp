@@ -81,13 +81,15 @@ bool Input::Backward(bool debug, const NetworkIO& fwd_deltas,
 // Returns nullptr on error.
 /* static */
 Pix* Input::PrepareLSTMInputs(const ImageData& image_data,
+                              const LoresImage* const lores,
+                              const TBOX& line_box,
                               const Network* network, int min_width,
                               TRand* randomizer, float* image_scale) {
   // Note that NumInputs() is defined as input image height.
   int target_height = network->NumInputs();
   int width, height;
   Pix* pix = image_data.PreScale(target_height, kMaxInputHeight, image_scale,
-                                 &width, &height, nullptr);
+                                 &width, &height, nullptr, lores, line_box);
   if (pix == nullptr) {
     tprintf("Bad pix from ImageData!\n");
     return nullptr;
