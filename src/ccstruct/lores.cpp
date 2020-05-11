@@ -67,7 +67,7 @@
 #include "rect.h"        // for TBOX, ICOORD, FCOORD
 #include <cmath>         // for ceil
 #include <limits>        // for maximum int limit checking
-
+#include "tprintf.h"     // for tprintf
 
 // Maximum scale factor to allow; beyond this probably means that there
 // are no letters present, perhaps only some midline punctuation.
@@ -523,7 +523,8 @@ LoresImage::LoresImage(Pix* image, int resolution, int target_resolution,
     target_resolution_(target_resolution),
     scaling_method_(scaling_method),
     blur_amount_(blur),
-    image_(nullptr)
+    image_(nullptr),
+    scaled_image_(nullptr)
 {
   Pix* pixtemp;
 
@@ -558,6 +559,8 @@ LoresImage::LoresImage(Pix* image, int resolution, int target_resolution,
                                        blur, 1.0);
     scaled_image_ = pixConvolve(pixtemp, gauss_kernel_, 8, 1);
   } else {
+    kernel_halfsize_ = 0;
+    gauss_kernel_ = nullptr;
     scaled_image_ = pixClone(pixtemp);
   }
 
@@ -633,8 +636,10 @@ Pix* LoresImage::GetScaledImageBox(int target_height, const TBOX& box) const
   float lry = std::min(lry0, static_cast<float>(horig_));
   
   float scaling = scale_factor_ * target_height / box.height();
-  if (scaling > kMaxScale)
+  if (scaling > kMaxScale) {
+    tprintf("scaling factor %g too large\n", scaling);
     return nullptr;
+  }
 
   float image_ratio = float(box.right() - box.left()) /
                         (box.top() - box.bottom());
@@ -644,8 +649,12 @@ Pix* LoresImage::GetScaledImageBox(int target_height, const TBOX& box) const
   
   Pix *pixtemp = rescale(image_, xsize_over, ysize_over, scaling_method_,
                          ulx, uly, lrx, lry);
-  if (!pixtemp)
+  if (!pixtemp) {
+    tprintf("Could not rescale image to requested size "
+            "(ul = (%.2f, %.2f), lr = (%.2f, %.2f))\n",
+            ulx, uly, lrx, lry);
     return nullptr;
+  }
 
   if (blur_amount_ > 0) {
     Pix *pixblur = pixConvolve(pixtemp, gauss_kernel_, 8, 1);
@@ -661,16 +670,26 @@ Pix* LoresImage::GetScaledImageBox(int target_height, const TBOX& box) const
   // than we have available.  (One pixel difference should have little
   // impact on the recognition results.)
 
-  int left = static_cast<int16_t>(overshoot * scaling - (ulx - ulx0));
-  int top = static_cast<int16_t>(overshoot * scaling - (uly - uly0));
+  int left = int(overshoot * scaling - (ulx - ulx0));
+  int top = int(overshoot * scaling - (uly - uly0));
 
   Box *boxtemp = boxCreateValid(left, top, target_width, target_height);
   if (!boxtemp) {
     pixDestroy(&pixtemp);
+    tprintf("Could not create valid box "
+            "(ul = (%d, %d), (w,h) = (%d, %d))\n",
+            left, top, target_width, target_height);
     return nullptr;
   }
   
   Pix *pixd = pixClipRectangle(pixtemp, boxtemp, nullptr);
+  if (!pixd) {
+    tprintf("Could not run pixClipRectangle: "
+            "pixtemp (w,h) = (%d, %d), "
+            "clip box = (ul = (%d, %d), (w,h) = (%d, %d))\n",
+            pixGetWidth(pixtemp), pixGetHeight(pixtemp),
+            left, top, target_width, target_height);
+  }
   boxDestroy(&boxtemp);
   pixDestroy(&pixtemp);
 
