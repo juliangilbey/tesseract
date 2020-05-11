@@ -526,7 +526,7 @@ LoresImage::LoresImage(Pix* image, int resolution, int target_resolution,
     image_(nullptr),
     scaled_image_(nullptr),
     kernel_halfsize_(0),
-    gauss_kernel(nullptr)
+    gauss_kernel_(nullptr)
 {
   Pix* pixtemp;
 
