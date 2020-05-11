@@ -598,6 +598,7 @@ Pix* LoresImage::GetScaledImageBox(int target_height, const TBOX& box) const
   // We rescale a portion of the lores image large enough to give the
   // requested box plus enough overshoot to account for the scaling
   // method and blurring, to avoid edge effects.
+  // Note that overshoot is measured in lores image pixels.
 
   float overshoot;
   switch (scaling_method_) {
@@ -635,7 +636,9 @@ Pix* LoresImage::GetScaledImageBox(int target_height, const TBOX& box) const
   if (scaling > kMaxScale)
     return nullptr;
 
-  int target_width = IntCastRounded(scaling * worig_);
+  float image_ratio = float(box.right() - box.left()) /
+                        (box.top() - box.bottom());
+  int target_width = IntCastRounded(target_height * image_ratio);
   int xsize_over = IntCastRounded(scaling * (lrx - ulx));
   int ysize_over = IntCastRounded(scaling * (lry - uly));
   
@@ -644,36 +647,22 @@ Pix* LoresImage::GetScaledImageBox(int target_height, const TBOX& box) const
   if (!pixtemp)
     return nullptr;
 
-  // Now the pixtemp is the rescaled image with some overshoot.  How
-  // much overshoot is there?  This is one way to determine it: in the
-  // x-direction, we have an extra xsize_over - target_width pixels,
-  // and these are distributed on the left and right in the ratio
-  // (ulx - ulx0) : (lrx0 - lrx) (with the understanding that all of the
-  // extra is on one side if either of these is zero).
+  if (blur_amount_ > 0) {
+    Pix *pixblur = pixConvolve(pixtemp, gauss_kernel_, 8, 1);
+    pixDestroy(&pixtemp);
+    pixtemp = pixblur;
+  }
 
-  float extra = xsize_over - target_width;
-  float ul_extra = ulx - ulx0;
-  float lr_extra = lrx0 - lrx;
-  int left;
-  if (ul_extra == 0)
-    left = 0;
-  else if (lr_extra == 0)
-    left = extra;
-  else
-    // round down, so that left + target_width <= xsize_over
-    left = static_cast<int16_t>(extra * ul_extra / (ul_extra + lr_extra));
+  // Now the pixtemp is the rescaled image with some overshoot.
+  // The intended overshoot was "overshoot", but we had to trim the
+  // overshoot by (ulx - ulx0) on the left and by (uly - uly0) on the top.
+  // We therefore remove overshoot - (ulx - ulx0) from the left and
+  // similarly from the top, rounded down to avoid removing more pixels
+  // than we have available.  (One pixel difference should have little
+  // impact on the recognition results.)
 
-  extra = ysize_over - target_height;
-  ul_extra = uly - uly0;
-  lr_extra = lry0 - lry;
-  int top;
-  if (ul_extra == 0)
-    top = 0;
-  else if (lr_extra == 0)
-    top = extra;
-  else
-    // round down, so that top + target_height <= ysize_over
-    top = static_cast<int16_t>(extra * ul_extra / (ul_extra + lr_extra));
+  int left = static_cast<int16_t>(overshoot * scaling - (ulx - ulx0));
+  int top = static_cast<int16_t>(overshoot * scaling - (uly - uly0));
 
   Box *boxtemp = boxCreateValid(left, top, target_width, target_height);
   if (!boxtemp) {
