@@ -524,7 +524,9 @@ LoresImage::LoresImage(Pix* image, int resolution, int target_resolution,
     scaling_method_(scaling_method),
     blur_amount_(blur),
     image_(nullptr),
-    scaled_image_(nullptr)
+    scaled_image_(nullptr),
+    kernel_halfsize_(0),
+    gauss_kernel(nullptr)
 {
   Pix* pixtemp;
 
@@ -559,8 +561,6 @@ LoresImage::LoresImage(Pix* image, int resolution, int target_resolution,
                                        blur, 1.0);
     scaled_image_ = pixConvolve(pixtemp, gauss_kernel_, 8, 1);
   } else {
-    kernel_halfsize_ = 0;
-    gauss_kernel_ = nullptr;
     scaled_image_ = pixClone(pixtemp);
   }
 
