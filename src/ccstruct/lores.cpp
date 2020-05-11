@@ -519,14 +519,17 @@ Pix* rescale(Pix* pix, int xsize, int ysize, LoresScalingMethod filter,
 // The destructor must pixDestroy the created copy of the image.
 LoresImage::LoresImage(Pix* image, int resolution, int target_resolution,
                        LoresScalingMethod scaling_method, double blur)
-  : resolution_(resolution),
+  : image_(nullptr),
+    resolution_(resolution),
+    worig_(0), horig_(0),
     target_resolution_(target_resolution),
+    wtarget_(0), htarget_(0),
     scaling_method_(scaling_method),
     blur_amount_(blur),
-    image_(nullptr),
-    scaled_image_(nullptr),
+    scale_factor_(1),
     kernel_halfsize_(0),
-    gauss_kernel_(nullptr)
+    gauss_kernel_(nullptr),
+    scaled_image_(nullptr)
 {
   Pix* pixtemp;
 
@@ -567,25 +570,39 @@ LoresImage::LoresImage(Pix* image, int resolution, int target_resolution,
   pixDestroy(&pixtemp);
 }
 
-
 LoresImage::~LoresImage()
 {
   pixDestroy(&image_);
   pixDestroy(&scaled_image_);
 }
 
+LoresImage::LoresImage(const LoresImage& lores)
+  : image_(nullptr),
+    resolution_(lores.resolution_),
+    worig_(lores.worig_), horig_(lores.horig_),
+    target_resolution_(lores.target_resolution_),
+    wtarget_(lores.wtarget_), htarget_(lores.htarget_),
+    scaling_method_(lores.scaling_method_),
+    blur_amount_(lores.blur_amount_),
+    scale_factor_(lores.scale_factor_),
+    kernel_halfsize_(lores.kernel_halfsize_),
+    gauss_kernel_(nullptr),
+    scaled_image_(nullptr)
+{
+  if (lores.image_) image_ = pixClone(lores.image_);
+  if (lores.scaled_image_) scaled_image_ = pixClone(lores.scaled_image_);
+  if (lores.gauss_kernel_) gauss_kernel_ = kernelCopy(lores.gauss_kernel_);
+}
 
 Pix* LoresImage::GetImage() const
 {
   return image_ ? pixClone(image_) : nullptr;
 }
 
-
 Pix* LoresImage::GetFullScaledImage() const
 {
   return scaled_image_ ? pixClone(scaled_image_) : nullptr;
 }
-
 
 // Gets a scaled image of a portion of the original image, scaled using the
 // stored scaling and blurring methods to achieve the specified
@@ -695,6 +712,5 @@ Pix* LoresImage::GetScaledImageBox(int target_height, const TBOX& box) const
 
   return pixd;
 }
-
 
 }  // namespace tesseract.

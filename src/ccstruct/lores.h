@@ -99,6 +99,7 @@ class LoresImage {
   LoresImage(Pix* image, int resolution, int target_resolution,
              LoresScalingMethod scaling_method, double blur);
   ~LoresImage();
+  LoresImage(const LoresImage&);
 
   // TODO?  We may wish to do this at some point, but not for the time being.
   // Writes to the given file. Returns false in case of error.
@@ -153,18 +154,18 @@ class LoresImage {
 
  private:
   Pix* image_;                         // Lores greyscale image.
-  Pix* scaled_image_;                  // Scaled full image.
   int resolution_;                     // Stated resolution of image.
+  int worig_;                          // Width of lores image.
+  int horig_;                          // Height of lores image.
   int target_resolution_;              // Stated resolution of image.
+  int wtarget_;                        // Width of full target image.
+  int htarget_;                        // Height of full target image.
   LoresScalingMethod scaling_method_;  // Method used for scaling.
   double blur_amount_;                 // Gaussian blur s.d. to apply.
   double scale_factor_;                // target_resolution_ / resolution_.
-  int worig_;                          // Width of lores image.
-  int horig_;                          // Height of lores image.
-  int wtarget_;                        // Width of full target image.
-  int htarget_;                        // Height of full target image.
   int kernel_halfsize_;                // Kernel size is 2 * this + 1.
-  L_KERNEL *gauss_kernel_;              // Gaussian blurring kernel.
+  L_KERNEL *gauss_kernel_;             // Gaussian blurring kernel.
+  Pix* scaled_image_;                  // Scaled full image.
 };
 
 }  // namespace tesseract
