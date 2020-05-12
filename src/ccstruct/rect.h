@@ -44,6 +44,8 @@ class DLLSYM TBOX  {  // bounding box
     TBOX(                    // constructor
         int16_t left, int16_t bottom, int16_t right, int16_t top);
 
+    TBOX(const TBOX&);       // copy constructor
+
     TBOX(  // box around FCOORD
         const FCOORD pt);
 

@@ -21,11 +21,8 @@
 #include "network.h"
 
 class ScrollView;
-class TBOX;
 
 namespace tesseract {
-
-class LoresImage;
 
 class Input : public Network {
  public:
@@ -80,13 +77,9 @@ class Input : public Network {
                 NetworkIO* back_deltas) override;
   // Creates and returns a Pix of appropriate size for the network from the
   // image_data. If non-null, *image_scale returns the image scale factor used.
-  // If lores is non-null, then the image is regenerated from the original
-  // low resolution image.
   // Returns nullptr on error.
   /* static */
   static Pix* PrepareLSTMInputs(const ImageData& image_data,
-                                const LoresImage* const lores,
-                                const TBOX& line_box,
                                 const Network* network, int min_width,
                                 TRand* randomizer, float* image_scale);
   // Converts the given pix to a NetworkIO of height and depth appropriate to

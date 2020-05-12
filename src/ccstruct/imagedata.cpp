@@ -124,9 +124,13 @@ int FloatWordFeature::SortByXBucket(const void* v1, const void* v2) {
 ImageData::ImageData() : page_number_(-1), vertical_text_(false) {
 }
 // Takes ownership of the pix and destroys it.
-ImageData::ImageData(bool vertical, Pix* pix)
-  : page_number_(0), vertical_text_(vertical) {
+ImageData::ImageData(bool vertical, Pix* pix, LoresImage *lores,
+		     TBOX& image_box)
+  : page_number_(0), vertical_text_(vertical),
+    lores_(nullptr), image_box_(image_box) {
   SetPix(pix);
+  if (lores)
+    lores_ = new LoresImage(*lores);
 }
 ImageData::~ImageData() {
 }
@@ -228,9 +232,7 @@ Pix* ImageData::GetPix() const {
 // to the image to achieve the target_height.
 Pix* ImageData::PreScale(int target_height, int max_height, float* scale_factor,
                          int* scaled_width, int* scaled_height,
-                         GenericVector<TBOX>* boxes,
-                         const LoresImage* const lores,
-                         const TBOX& line_box) const {
+                         GenericVector<TBOX>* boxes) const {
   int input_width = 0;
   int input_height = 0;
   Pix* src_pix = GetPix();
@@ -247,8 +249,8 @@ Pix* ImageData::PreScale(int target_height, int max_height, float* scale_factor,
     *scaled_height = target_height;
   // Get the scaled image, using lores if it is non-null.
   Pix* pix;
-  if (lores)
-    pix = lores->GetScaledImageBox(target_height, line_box);
+  if (lores_)
+    pix = lores_->GetScaledImageBox(target_height, image_box_);
   else
     pix = pixScale(src_pix, im_factor, im_factor);
   if (pix == nullptr) {

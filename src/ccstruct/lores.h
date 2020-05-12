@@ -78,10 +78,14 @@
 #ifndef TESSERACT_IMAGE_LORES_H_
 #define TESSERACT_IMAGE_LORES_H_
 
+#include "genericvector.h"      // for GenericVector, PointerVector, FileReader
+
 class TBOX;
 #include "allheaders.h"       // for Pix and other Leptonica structures
 
 namespace tesseract {
+
+class TFile;
 
 // Enum to store the method used to scale a LoresImage
 enum LoresScalingMethod {
@@ -96,33 +100,32 @@ enum LoresScalingMethod {
 // It performs scaling to 300 dpi according to the specified scaling method.
 class LoresImage {
  public:
-  LoresImage(Pix* image, int resolution, int target_resolution,
+  LoresImage(Pix* image, int32_t resolution, int32_t target_resolution,
              LoresScalingMethod scaling_method, double blur);
   ~LoresImage();
   LoresImage(const LoresImage&);
 
-  // TODO?  We may wish to do this at some point, but not for the time being.
   // Writes to the given file. Returns false in case of error.
-  // bool Serialize(TFile* fp) const;
+  bool Serialize(TFile* fp) const;
   // Reads from the given file. Returns false in case of error.
-  // bool DeSerialize(TFile* fp);
+  bool DeSerialize(TFile* fp);
   // As DeSerialize, but only seeks past the data - hence a static method.
-  // static bool SkipDeSerialize(TFile* fp);
+  static bool SkipDeSerialize(TFile* fp);
 
   // Other accessors.
-  int resolution() const {
+  int32_t resolution() const {
     return resolution_;
   }
-  void set_resolution(int resolution) {
+  void set_resolution(int32_t resolution) {
     resolution_ = resolution;
   }
-  int target_resolution() const {
+  int32_t target_resolution() const {
     return target_resolution_;
   }
-  void set_target_resolution(int resolution) {
+  void set_target_resolution(int32_t resolution) {
     target_resolution_ = resolution;
   }
-  int scaling_method() const {
+  int32_t scaling_method() const {
     return scaling_method_;
   }
   void set_scaling_method(LoresScalingMethod method) {
@@ -150,22 +153,44 @@ class LoresImage {
   // The return value is the scaled Pix, which must be pixDestroyed after use.
   // If the resulting scale factor is too great or other errors occur,
   // nullptr will be returned.
-  Pix* GetScaledImageBox(int target_height, const TBOX& box) const;
+  Pix* GetScaledImageBox(int32_t target_height, const TBOX& box) const;
 
  private:
-  Pix* image_;                         // Lores greyscale image.
-  int resolution_;                     // Stated resolution of image.
-  int worig_;                          // Width of lores image.
-  int horig_;                          // Height of lores image.
-  int target_resolution_;              // Stated resolution of image.
-  int wtarget_;                        // Width of full target image.
-  int htarget_;                        // Height of full target image.
-  LoresScalingMethod scaling_method_;  // Method used for scaling.
-  double blur_amount_;                 // Gaussian blur s.d. to apply.
-  double scale_factor_;                // target_resolution_ / resolution_.
-  int kernel_halfsize_;                // Kernel size is 2 * this + 1.
-  L_KERNEL *gauss_kernel_;             // Gaussian blurring kernel.
-  Pix* scaled_image_;                  // Scaled full image.
+  // Make the full scaled image.
+  // This method assumes that all private variables are suitably initialised
+  // This internal function is marked const, as it only touches mutable
+  // members, and is called by const functions.
+  void MakeFullScaledImage() const;
+
+  // These are (almost) identical to the static methods
+  // ImageData::{Set,Get}PixInternal, except that the Set function does not
+  // pixDestroy the given Pix.  If the ImageData methods were not private,
+  // we would use those here.
+
+  // Saves the given Pix as a PNG-encoded string and destroys it.
+  // In case of missing PNG support in Leptonica use PNM format,
+  // which requires more memory.
+  static l_int32 PixToData(Pix* pix, GenericVector<char>* image_data);
+  // Returns the Pix image for the image_data. Must be pixDestroyed after use.
+  static Pix* DataToPix(const GenericVector<char>& image_data);
+
+ private:
+  Pix* image_;                          // Lores greyscale image.
+  // These types are a little wasteful of space; we could suffice
+  // with int16_t, but then we would have to be more careful with
+  // implicit type conversions
+  int32_t resolution_;                  // Stated resolution of image.
+  int32_t worig_;                       // Width of lores image.
+  int32_t horig_;                       // Height of lores image.
+  int32_t target_resolution_;           // Stated resolution of image.
+  int32_t wtarget_;                     // Width of full target image.
+  int32_t htarget_;                     // Height of full target image.
+  LoresScalingMethod scaling_method_;   // Method used for scaling.
+  double blur_amount_;                  // Gaussian blur s.d. to apply.
+  double scale_factor_;                 // target_resolution_ / resolution_.
+  mutable int32_t kernel_halfsize_;     // Kernel size is 2 * this + 1.
+  mutable L_KERNEL *gauss_kernel_;      // Gaussian blurring kernel.
+  mutable Pix* scaled_image_;           // Scaled full image.
 };
 
 }  // namespace tesseract

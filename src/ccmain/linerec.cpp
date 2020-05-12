@@ -197,8 +197,8 @@ ImageData* Tesseract::GetRectImage(const TBOX& box, const BLOCK& block,
   Box* clip_box = boxCreate(revised_box->left(), height - revised_box->top(),
                             revised_box->width(), revised_box->height());
   Pix* box_pix = pixClipRectangle(pix, clip_box, nullptr);
-  if (box_pix == nullptr) return nullptr;
   boxDestroy(&clip_box);
+  if (box_pix == nullptr) return nullptr;
   if (num_rotations > 0) {
     Pix* rot_pix = pixRotateOrth(box_pix, num_rotations);
     pixDestroy(&box_pix);
@@ -220,7 +220,10 @@ ImageData* Tesseract::GetRectImage(const TBOX& box, const BLOCK& block,
     if (num_rotations != 2)
       vertical_text = true;
   }
-  return new ImageData(vertical_text, box_pix);
+  // TODO (jdg): This currently makes no attempt to handle any block
+  // rotations necessary if lores_ is subsequently used.  If this works
+  // well for horizontal text, then we will consider fixing this.
+  return new ImageData(vertical_text, box_pix, lores_, *revised_box);
 }
 
 #ifndef ANDROID_BUILD
@@ -246,8 +249,7 @@ void Tesseract::LSTMRecognizeWord(const BLOCK& block, ROW *row, WERD_RES *word,
   if (im_data == nullptr) return;
 
   bool do_invert = tessedit_do_invert;
-  lstm_recognizer_->RecognizeLine(*im_data, lores_,
-                                  do_invert, classify_debug_level > 0,
+  lstm_recognizer_->RecognizeLine(*im_data, do_invert, classify_debug_level > 0,
                                   kWorstDictCertainty / kCertaintyScale,
                                   word_box, words, lstm_choice_mode);
   delete im_data;

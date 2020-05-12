@@ -45,6 +45,11 @@ class ICOORD
       xcoord = xin;
       ycoord = yin;
     }
+    ///copy constructor
+    ICOORD(const ICOORD& source) {
+      xcoord = source.xcoord;
+      ycoord = source.ycoord;
+    }
     ///destructor
     ~ICOORD () = default;
 

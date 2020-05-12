@@ -22,11 +22,11 @@
 
 #include "genericvector.h"      // for GenericVector, PointerVector, FileReader
 #include "points.h"             // for FCOORD
+#include "rect.h"               // for TBOX
 #include "strngs.h"             // for STRING
 #include "svutil.h"             // for SVAutoLock, SVMutex
 
 class ScrollView;
-class TBOX;
 struct Pix;
 
 namespace tesseract {
@@ -107,7 +107,7 @@ class ImageData {
  public:
   ImageData();
   // Takes ownership of the pix.
-  ImageData(bool vertical, Pix* pix);
+  ImageData(bool vertical, Pix* pix, LoresImage *lores, TBOX& image_box);
   ~ImageData();
 
   // Builds and returns an ImageData from the basic data. Note that imagedata,
@@ -171,9 +171,7 @@ class ImageData {
   // to the image to achieve the target_height.
   Pix* PreScale(int target_height, int max_height, float* scale_factor,
                 int* scaled_width, int* scaled_height,
-                GenericVector<TBOX>* boxes,
-                const LoresImage* const lores,
-                const TBOX& line_box) const;
+                GenericVector<TBOX>* boxes) const;
 
   int MemoryUsed() const;
 
@@ -206,6 +204,12 @@ class ImageData {
   GenericVector<TBOX> boxes_;        // If non-empty boxes of the image.
   GenericVector<STRING> box_texts_;  // String for text in each box.
   bool vertical_text_;               // Image has been rotated from vertical.
+  LoresImage* lores_;                // The lores image from which this image
+                                     // data has been produced, if relevant.
+  TBOX image_box_;                   // The box specifying the location of
+                                     // the image_data_ in the original pix_.
+  // TODO(jdg): need to include suitable rotation information for the
+  // image_box_; at the moment, assuming it is all horizontal (0 rotation).
 };
 
 // A collection of ImageData that knows roughly how much memory it is using.

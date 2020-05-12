@@ -66,6 +66,14 @@ TBOX::TBOX(                    //constructor
     : bot_left(left, bottom), top_right(right, top) {
 }
 
+/**********************************************************************
+ * TBOX::TBOX()  Copy constructor
+ **********************************************************************/
+
+TBOX::TBOX(const TBOX& source)       //copy constructor
+    : bot_left(source.bot_left), top_right(source.top_right) {
+}
+
 // rotate_large constructs the containing bounding box of all 4
 // corners after rotating them. It therefore guarantees that all
 // original content is contained within, but also slightly enlarges the box.
