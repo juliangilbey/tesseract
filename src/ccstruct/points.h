@@ -24,6 +24,7 @@
 #include "elst.h"
 #include "errcode.h"            // for ASSERT_HOST
 #include "platform.h"           // for DLLSYM
+#include "serialis.h"           // for TFile
 
 class FCOORD;
 
@@ -49,6 +50,12 @@ class ICOORD
     ICOORD(const ICOORD& source) {
       xcoord = source.xcoord;
       ycoord = source.ycoord;
+    }
+    ///copy assignment
+    ICOORD& operator=(const ICOORD& source) {
+      xcoord = source.xcoord;
+      ycoord = source.ycoord;
+      return *this;
     }
     ///destructor
     ~ICOORD () = default;
@@ -157,6 +164,11 @@ class ICOORD
     // Reads from the given file. Returns false in case of error.
     // If swap is true, assumes a big/little-endian swap is needed.
     bool DeSerialize(bool swap, FILE* fp);
+    // The same as the above, but using TFile.
+    bool Serialize(tesseract::TFile* fp) const;
+    bool DeSerialize(tesseract::TFile* fp);
+    // As DeSerialize, but only seeks past the data - hence a static method.
+    static bool SkipDeSerialize(tesseract::TFile* fp);
 
   protected:
     int16_t xcoord;                ///< x value

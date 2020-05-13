@@ -517,6 +517,21 @@ Pix* rescale(Pix* pix, int xsize, int ysize, LoresScalingMethod filter,
 
 } // end anonymous namespace
 
+// A default constructor creating an "empty" LoresImage object
+LoresImage::LoresImage()
+  : image_(nullptr),
+    resolution_(0),
+    worig_(0), horig_(0),
+    target_resolution_(0),
+    wtarget_(0), htarget_(0),
+    scaling_method_(LSM_BICUBIC),
+    blur_amount_(0),
+    scale_factor_(1),
+    kernel_halfsize_(0),
+    gauss_kernel_(nullptr),
+    scaled_image_(nullptr) {
+}
+ 
 // The destructor must pixDestroy the created copy of the image.
 LoresImage::LoresImage(Pix* image, int32_t resolution,
                        int32_t target_resolution,
@@ -555,6 +570,31 @@ LoresImage::LoresImage(Pix* image, int32_t resolution,
   MakeFullScaledImage();
 }
 
+LoresImage::LoresImage(const LoresImage& lores)
+  : image_(nullptr),
+    resolution_(lores.resolution_),
+    worig_(lores.worig_), horig_(lores.horig_),
+    target_resolution_(lores.target_resolution_),
+    wtarget_(lores.wtarget_), htarget_(lores.htarget_),
+    scaling_method_(lores.scaling_method_),
+    blur_amount_(lores.blur_amount_),
+    scale_factor_(lores.scale_factor_),
+    kernel_halfsize_(lores.kernel_halfsize_),
+    gauss_kernel_(nullptr),
+    scaled_image_(nullptr)
+{
+  if (lores.image_) image_ = pixClone(lores.image_);
+  if (lores.scaled_image_) scaled_image_ = pixClone(lores.scaled_image_);
+  if (lores.gauss_kernel_) gauss_kernel_ = kernelCopy(lores.gauss_kernel_);
+}
+
+LoresImage::~LoresImage()
+{
+  if (image_) pixDestroy(&image_);
+  if (scaled_image_) pixDestroy(&scaled_image_);
+  if (gauss_kernel_) kernelDestroy(&gauss_kernel_);
+}
+
 // Make the full scaled image.
 // This method assumes that all private variables are suitably initialised
 // This internal function is marked const, as it only touches mutable
@@ -578,31 +618,6 @@ void LoresImage::MakeFullScaledImage() const
   }
 
   pixDestroy(&pixtemp);
-}
-
-LoresImage::~LoresImage()
-{
-  if (image_) pixDestroy(&image_);
-  if (scaled_image_) pixDestroy(&scaled_image_);
-  if (gauss_kernel_) kernelDestroy(&gauss_kernel_);
-}
-
-LoresImage::LoresImage(const LoresImage& lores)
-  : image_(nullptr),
-    resolution_(lores.resolution_),
-    worig_(lores.worig_), horig_(lores.horig_),
-    target_resolution_(lores.target_resolution_),
-    wtarget_(lores.wtarget_), htarget_(lores.htarget_),
-    scaling_method_(lores.scaling_method_),
-    blur_amount_(lores.blur_amount_),
-    scale_factor_(lores.scale_factor_),
-    kernel_halfsize_(lores.kernel_halfsize_),
-    gauss_kernel_(nullptr),
-    scaled_image_(nullptr)
-{
-  if (lores.image_) image_ = pixClone(lores.image_);
-  if (lores.scaled_image_) scaled_image_ = pixClone(lores.scaled_image_);
-  if (lores.gauss_kernel_) gauss_kernel_ = kernelCopy(lores.gauss_kernel_);
 }
 
 // These are (almost) identical to the static methods
@@ -707,11 +722,6 @@ bool LoresImage::SkipDeSerialize(TFile* fp)
   // don't deserialize:
   // L_KERNEL *gauss_kernel_;             // Gaussian blurring kernel.
   // Pix* scaled_image_;                  // Scaled full image.
-}
-
-Pix* LoresImage::GetImage() const
-{
-  return image_ ? pixClone(image_) : nullptr;
 }
 
 Pix* LoresImage::GetFullScaledImage() const

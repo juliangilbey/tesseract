@@ -27,6 +27,7 @@
 #include "platform.h"          // for DLLSYM
 #include "points.h"            // for ICOORD, FCOORD
 #include "scrollview.h"        // for ScrollView, ScrollView::Color
+#include "serialis.h"          // for TFile
 #include "tprintf.h"           // for tprintf
 
 class STRING;
@@ -45,6 +46,8 @@ class DLLSYM TBOX  {  // bounding box
         int16_t left, int16_t bottom, int16_t right, int16_t top);
 
     TBOX(const TBOX&);       // copy constructor
+
+    TBOX& operator=(const TBOX&);       // copy assignment
 
     TBOX(  // box around FCOORD
         const FCOORD pt);
@@ -301,6 +304,11 @@ class DLLSYM TBOX  {  // bounding box
     // Reads from the given file. Returns false in case of error.
     // If swap is true, assumes a big/little-endian swap is needed.
     bool DeSerialize(bool swap, FILE* fp);
+    // The same as the above, but using TFile.
+    bool Serialize(tesseract::TFile* fp) const;
+    bool DeSerialize(tesseract::TFile* fp);
+    // As DeSerialize, but only seeks past the data - hence a static method.
+    static bool SkipDeSerialize(tesseract::TFile* fp);
 
     friend TBOX& operator+=(TBOX&, const TBOX&);
     // in place union

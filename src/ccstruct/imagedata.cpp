@@ -91,6 +91,7 @@ bool WordFeature::Serialize(FILE* fp) const {
 }
 
 // Reads from the given file. Returns false in case of error.
+// If swap is true, assumes a big/little-endian swap is needed.
 bool WordFeature::DeSerialize(bool swap, FILE* fp) {
   if (!tesseract::DeSerialize(fp, &x_)) return false;
   if (swap) ReverseN(&x_, sizeof(x_));
@@ -121,7 +122,9 @@ int FloatWordFeature::SortByXBucket(const void* v1, const void* v2) {
   return x_diff;
 }
 
-ImageData::ImageData() : page_number_(-1), vertical_text_(false) {
+ImageData::ImageData()
+  : page_number_(-1), vertical_text_(false),
+    lores_(nullptr) {
 }
 // Takes ownership of the pix and destroys it.
 ImageData::ImageData(bool vertical, Pix* pix, LoresImage *lores,
@@ -178,11 +181,17 @@ bool ImageData::Serialize(TFile* fp) const {
   if (!boxes_.Serialize(fp)) return false;
   if (!box_texts_.SerializeClasses(fp)) return false;
   int8_t vertical = vertical_text_;
-  return fp->Serialize(&vertical);
+  if (!fp->Serialize(&vertical)) return false;
+  int8_t has_lores = lores_ ? 1 : 0;
+  if (!fp->Serialize(&has_lores)) return false;
+  if (lores_) {
+    if (!lores_->Serialize(fp)) return false;
+    if (!image_box_.Serialize(fp)) return false;
+  }
+  return true;
 }
 
 // Reads from the given file. Returns false in case of error.
-// If swap is true, assumes a big/little-endian swap is needed.
 bool ImageData::DeSerialize(TFile* fp) {
   if (!imagefilename_.DeSerialize(fp)) return false;
   if (!fp->DeSerialize(&page_number_)) return false;
@@ -195,6 +204,19 @@ bool ImageData::DeSerialize(TFile* fp) {
   int8_t vertical = 0;
   if (!fp->DeSerialize(&vertical)) return false;
   vertical_text_ = vertical != 0;
+  int8_t has_lores = 0;
+  if (!fp->DeSerialize(&has_lores)) return false;
+  if (has_lores) {
+    if (lores_)
+      delete lores_;
+    lores_ = new LoresImage;
+    if (!lores_->DeSerialize(fp)) return false;
+    if (!image_box_.DeSerialize(fp)) return false;
+  } else {
+    if (lores_)
+      delete lores_;
+    lores_ = nullptr;
+  }
   return true;
 }
 
@@ -209,7 +231,14 @@ bool ImageData::SkipDeSerialize(TFile* fp) {
   if (!GenericVector<TBOX>::SkipDeSerialize(fp)) return false;
   if (!GenericVector<STRING>::SkipDeSerializeClasses(fp)) return false;
   int8_t vertical = 0;
-  return fp->DeSerialize(&vertical);
+  if (!fp->DeSerialize(&vertical)) return false;
+  int8_t has_lores = 0;
+  if (!fp->DeSerialize(&has_lores)) return false;
+  if (has_lores) {
+    if (!LoresImage::SkipDeSerialize(fp)) return false;
+    if (!TBOX::SkipDeSerialize(fp)) return false;
+  }
+  return true;
 }
 
 // Saves the given Pix as a PNG-encoded string and destroys it.

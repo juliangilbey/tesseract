@@ -100,6 +100,7 @@ enum LoresScalingMethod {
 // It performs scaling to 300 dpi according to the specified scaling method.
 class LoresImage {
  public:
+  LoresImage();
   LoresImage(Pix* image, int32_t resolution, int32_t target_resolution,
              LoresScalingMethod scaling_method, double blur);
   ~LoresImage();
@@ -111,35 +112,6 @@ class LoresImage {
   bool DeSerialize(TFile* fp);
   // As DeSerialize, but only seeks past the data - hence a static method.
   static bool SkipDeSerialize(TFile* fp);
-
-  // Other accessors.
-  int32_t resolution() const {
-    return resolution_;
-  }
-  void set_resolution(int32_t resolution) {
-    resolution_ = resolution;
-  }
-  int32_t target_resolution() const {
-    return target_resolution_;
-  }
-  void set_target_resolution(int32_t resolution) {
-    target_resolution_ = resolution;
-  }
-  int32_t scaling_method() const {
-    return scaling_method_;
-  }
-  void set_scaling_method(LoresScalingMethod method) {
-    scaling_method_ = method;
-  }
-  double blur_amount() const {
-    return blur_amount_;
-  }
-  void set_blur_amount(double blur) {
-    blur_amount_ = blur;
-  }
-
-  // Returns a copy of the lores Pix image. Must be pixDestroyed after use.
-  Pix* GetImage() const;
 
   // Returns a copy of the full scaled-up Pix image.
   // Must be pixDestroyed after use.

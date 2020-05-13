@@ -74,6 +74,21 @@ bool ICOORD::DeSerialize(bool swap, FILE* fp) {
   return true;
 }
 
+// The same as the above, but using TFile.
+bool ICOORD::Serialize(tesseract::TFile* fp) const {
+  return fp->Serialize(&xcoord) && fp->Serialize(&ycoord);
+}
+// Reads from the given file. Returns false in case of error.
+// If swap is true, assumes a big/little-endian swap is needed.
+bool ICOORD::DeSerialize(tesseract::TFile* fp) {
+  return fp->DeSerialize(&xcoord) && fp->DeSerialize(&ycoord);
+}
+// As DeSerialize, but only seeks past the data - hence a static method.
+bool ICOORD::SkipDeSerialize(tesseract::TFile* fp) {
+  int16_t temp;
+  return fp->DeSerialize(&temp) && fp->DeSerialize(&temp);
+}
+
 // Setup for iterating over the pixels in a vector by the well-known
 // Bresenham rendering algorithm.
 // Starting with major/2 in the accumulator, on each step add major_step,

@@ -74,6 +74,16 @@ TBOX::TBOX(const TBOX& source)       //copy constructor
     : bot_left(source.bot_left), top_right(source.top_right) {
 }
 
+/**********************************************************************
+ * TBOX::operator=()  Copy assignment
+ **********************************************************************/
+
+TBOX& TBOX::operator=(const TBOX& source) {
+  bot_left = source.bot_left;
+  top_right = source.top_right;
+  return *this;
+}
+
 // rotate_large constructs the containing bounding box of all 4
 // corners after rotating them. It therefore guarantees that all
 // original content is contained within, but also slightly enlarges the box.
@@ -200,6 +210,25 @@ bool TBOX::Serialize(FILE* fp) const {
 bool TBOX::DeSerialize(bool swap, FILE* fp) {
   if (!bot_left.DeSerialize(swap, fp)) return false;
   if (!top_right.DeSerialize(swap, fp)) return false;
+  return true;
+}
+
+// The same as the above, but using TFile.
+bool TBOX::Serialize(tesseract::TFile* fp) const {
+  if (!bot_left.Serialize(fp)) return false;
+  if (!top_right.Serialize(fp)) return false;
+  return true;
+}
+bool TBOX::DeSerialize(tesseract::TFile* fp) {
+  if (!bot_left.DeSerialize(fp)) return false;
+  if (!top_right.DeSerialize(fp)) return false;
+  return true;
+}
+// As DeSerialize, but only seeks past the data - hence a static method.
+bool TBOX::SkipDeSerialize(tesseract::TFile* fp) {
+  ICOORD itemp;
+  if (!itemp.SkipDeSerialize(fp)) return false;
+  if (!itemp.SkipDeSerialize(fp)) return false;
   return true;
 }
 
