@@ -517,6 +517,14 @@ Pix* rescale(Pix* pix, int xsize, int ysize, LoresScalingMethod filter,
 
 } // end anonymous namespace
 
+// Initialize static members
+bool LoresImage::scaling_initialized_ = false;
+bool LoresImage::scaling_warning_ = false;
+LoresScalingMethod LoresImage::scaling_method_ = LSM_BICUBIC;
+double LoresImage::blur_amount_ = 0;
+int32_t LoresImage::kernel_halfsize_ = 0;
+L_KERNEL *LoresImage::gauss_kernel_ = nullptr;
+
 // A default constructor creating an "empty" LoresImage object
 LoresImage::LoresImage()
   : image_(nullptr),
@@ -524,12 +532,8 @@ LoresImage::LoresImage()
     worig_(0), horig_(0),
     target_resolution_(0),
     wtarget_(0), htarget_(0),
-    scaling_method_(LSM_BICUBIC),
-    blur_amount_(0),
-    scale_factor_(1),
-    kernel_halfsize_(0),
-    gauss_kernel_(nullptr),
-    scaled_image_(nullptr) {
+    scale_factor_(1)
+{
 }
  
 // The destructor must pixDestroy the created copy of the image.
@@ -541,12 +545,7 @@ LoresImage::LoresImage(Pix* image, int32_t resolution,
     worig_(0), horig_(0),
     target_resolution_(target_resolution),
     wtarget_(0), htarget_(0),
-    scaling_method_(scaling_method),
-    blur_amount_(blur),
-    scale_factor_(1),
-    kernel_halfsize_(0),
-    gauss_kernel_(nullptr),
-    scaled_image_(nullptr)
+    scale_factor_(1)
 {
   // This forces the image to be 8-bit greyscale
   if (pixGetColormap(image))
@@ -567,7 +566,27 @@ LoresImage::LoresImage(Pix* image, int32_t resolution,
   wtarget_ = IntCastRounded(worig_ * scale_factor_);
   htarget_ = IntCastRounded(horig_ * scale_factor_);
 
-  MakeFullScaledImage();
+  if (!scaling_initialized_) {
+    scaling_method_ = scaling_method;
+    blur_amount_ = blur;
+    if (blur_amount_ > 0) {
+      // This is perfectly adequate for the accuracy we need
+      kernel_halfsize_ = IntCastRounded(4 * blur_amount_);
+      gauss_kernel_ = makeGaussianKernel(kernel_halfsize_, kernel_halfsize_,
+                                         blur_amount_, 1.0);
+    }
+    scaling_initialized_ = true;
+  } else if (!scaling_warning_ &&
+             (scaling_method != scaling_method_ || blur != blur_amount_)) {
+      tprintf("Warning: new low-resolution image has specified different"
+              "scaling parameters\n"
+              "(method or blur amount) from the first image.\n"
+              "Ignoring new method.\n"
+              "(This has probably arisen from using lstmf files from two"
+              "different\n"
+              "sets of training.)\n");
+      scaling_warning_ = true;
+  }
 }
 
 LoresImage::LoresImage(const LoresImage& lores)
@@ -576,48 +595,14 @@ LoresImage::LoresImage(const LoresImage& lores)
     worig_(lores.worig_), horig_(lores.horig_),
     target_resolution_(lores.target_resolution_),
     wtarget_(lores.wtarget_), htarget_(lores.htarget_),
-    scaling_method_(lores.scaling_method_),
-    blur_amount_(lores.blur_amount_),
-    scale_factor_(lores.scale_factor_),
-    kernel_halfsize_(lores.kernel_halfsize_),
-    gauss_kernel_(nullptr),
-    scaled_image_(nullptr)
+    scale_factor_(lores.scale_factor_)
 {
   if (lores.image_) image_ = pixClone(lores.image_);
-  if (lores.scaled_image_) scaled_image_ = pixClone(lores.scaled_image_);
-  if (lores.gauss_kernel_) gauss_kernel_ = kernelCopy(lores.gauss_kernel_);
 }
 
 LoresImage::~LoresImage()
 {
   if (image_) pixDestroy(&image_);
-  if (scaled_image_) pixDestroy(&scaled_image_);
-  if (gauss_kernel_) kernelDestroy(&gauss_kernel_);
-}
-
-// Make the full scaled image.
-// This method assumes that all private variables are suitably initialised
-// This internal function is marked const, as it only touches mutable
-// members, and is called by const functions.
-void LoresImage::MakeFullScaledImage() const
-{
-  Pix* pixtemp = rescale(image_, int(wtarget_), int(htarget_), scaling_method_,
-                         0, 0, worig_, horig_);
-  if (pixtemp == nullptr)
-    return;
-
-  if (blur_amount_ > 0) {
-    // This is perfectly adequate for the accuracy we need
-    kernel_halfsize_ = IntCastRounded(4 * blur_amount_);
-    if (!gauss_kernel_)
-      gauss_kernel_ = makeGaussianKernel(kernel_halfsize_, kernel_halfsize_,
-                                         blur_amount_, 1.0);
-    scaled_image_ = pixConvolve(pixtemp, gauss_kernel_, 8, 1);
-  } else {
-    scaled_image_ = pixClone(pixtemp);
-  }
-
-  pixDestroy(&pixtemp);
 }
 
 // These are (almost) identical to the static methods
@@ -657,6 +642,10 @@ Pix* LoresImage::DataToPix(const GenericVector<char>& image_data) {
 // Writes to the given file. Returns false in case of error.
 // We only serialize the low-resolution image, and regenerate the
 // scaled images on deserialization only as we need them.
+// Though scaling_method_ and blur_amount_ are static, we do serialize
+// them for two reasons: (1) They are a way of ensuring consistency
+// between different lstmf files being used; (2) they are very small
+// (4 bytes each) so there is little storage cost in doing so.
 bool LoresImage::Serialize(TFile* fp) const
 {
   GenericVector<char> image_data;
@@ -669,14 +658,10 @@ bool LoresImage::Serialize(TFile* fp) const
   if (!fp->Serialize(&target_resolution_)) return false;
   if (!fp->Serialize(&wtarget_)) return false;
   if (!fp->Serialize(&htarget_)) return false;
+  if (!fp->Serialize(&scale_factor_)) return false;
   int32_t scaling_method = static_cast<int32_t>(scaling_method_);
   if (!fp->Serialize(&scaling_method)) return false;
-  if (!fp->Serialize(&blur_amount_)) return false;
-  if (!fp->Serialize(&scale_factor_)) return false;
-  return fp->Serialize(&kernel_halfsize_);
-  // don't serialize:
-  // L_KERNEL *gauss_kernel_;             // Gaussian blurring kernel.
-  // Pix* scaled_image_;                  // Scaled full image.
+  return fp->Serialize(&blur_amount_);
 }
 
 // Reads from the given file. Returns false in case of error.
@@ -692,15 +677,11 @@ bool LoresImage::DeSerialize(TFile* fp)
   if (!fp->DeSerialize(&target_resolution_)) return false;
   if (!fp->DeSerialize(&wtarget_)) return false;
   if (!fp->DeSerialize(&htarget_)) return false;
+  if (!fp->DeSerialize(&scale_factor_)) return false;
   int32_t scaling_method;
   if (!fp->DeSerialize(&scaling_method)) return false;
   scaling_method_ = static_cast<LoresScalingMethod>(scaling_method);
-  if (!fp->DeSerialize(&blur_amount_)) return false;
-  if (!fp->DeSerialize(&scale_factor_)) return false;
-  return fp->DeSerialize(&kernel_halfsize_);
-  // don't deserialize:
-  // L_KERNEL *gauss_kernel_;             // Gaussian blurring kernel.
-  // Pix* scaled_image_;                  // Scaled full image.
+  return fp->DeSerialize(&blur_amount_);
 }
 
 // As DeSerialize, but only seeks past the data - hence a static method.
@@ -714,31 +695,20 @@ bool LoresImage::SkipDeSerialize(TFile* fp)
   if (!fp->DeSerialize(&dummy)) return false;  // target_resolution_
   if (!fp->DeSerialize(&dummy)) return false;  // wtarget_
   if (!fp->DeSerialize(&dummy)) return false;  // htarget_
-  if (!fp->DeSerialize(&dummy)) return false;  // scaling_method_
   double ddummy;
-  if (!fp->DeSerialize(&ddummy)) return false;  // blur_amount_
   if (!fp->DeSerialize(&ddummy)) return false;  // scale_factor_
-  return fp->DeSerialize(&dummy);  // kernel_halfsize_
-  // don't deserialize:
-  // L_KERNEL *gauss_kernel_;             // Gaussian blurring kernel.
-  // Pix* scaled_image_;                  // Scaled full image.
+  if (!fp->DeSerialize(&dummy)) return false;  // scaling_method_
+  return fp->DeSerialize(&ddummy);  // blur_amount_
 }
 
 Pix* LoresImage::GetFullScaledImage() const
 {
-  if (scaled_image_)
-    return pixClone(scaled_image_);
-
-  MakeFullScaledImage();
-  if (scaled_image_)
-    return pixClone(scaled_image_);
-  else
-    return nullptr;
+  return GetScaledImageBox(htarget_, TBOX(0, 0, wtarget_, htarget_));
 }
 
 // Gets a scaled image of a portion of the original image, scaled using the
 // stored scaling and blurring methods to achieve the specified
-// target_height.  The specified bounding box is relative to the scaled
+// target_height.  The specified bounding box is relative to the **scaled**
 // whole image, when the lores image has been scaled to the originally
 // requested resolution; it is given in Tesseract coordinates (y=0 at the
 // bottom of the image).
@@ -806,13 +776,6 @@ Pix* LoresImage::GetScaledImageBox(int32_t target_height, const TBOX& box) const
   }
 
   if (blur_amount_ > 0) {
-    if (!gauss_kernel_) {
-      // if we are being called during the reading of an lstmf file,
-      // we may not have yet computed the gaussian convolution kernel
-      kernel_halfsize_ = IntCastRounded(4 * blur_amount_);
-      gauss_kernel_ = makeGaussianKernel(kernel_halfsize_, kernel_halfsize_,
-                                         blur_amount_, 1.0);
-    }
     Pix *pixblur = pixConvolve(pixtemp, gauss_kernel_, 8, 1);
     pixDestroy(&pixtemp);
     pixtemp = pixblur;

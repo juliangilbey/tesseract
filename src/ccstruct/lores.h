@@ -106,6 +106,14 @@ class LoresImage {
   ~LoresImage();
   LoresImage(const LoresImage&);
 
+  // Accessor functions
+  LoresScalingMethod scaling_method() const {
+    return scaling_method_;
+  }
+  double blur_amount() const {
+    return blur_amount_;
+  }
+  
   // Writes to the given file. Returns false in case of error.
   bool Serialize(TFile* fp) const;
   // Reads from the given file. Returns false in case of error.
@@ -148,21 +156,21 @@ class LoresImage {
 
  private:
   Pix* image_;                          // Lores greyscale image.
-  // These types are a little wasteful of space; we could suffice
-  // with int16_t, but then we would have to be more careful with
-  // implicit type conversions
+  // We could probably suffice with int16_t for many of the following,
+  // but then we would have to be more careful with implicit type conversions
   int32_t resolution_;                  // Stated resolution of image.
   int32_t worig_;                       // Width of lores image.
   int32_t horig_;                       // Height of lores image.
   int32_t target_resolution_;           // Stated resolution of image.
   int32_t wtarget_;                     // Width of full target image.
   int32_t htarget_;                     // Height of full target image.
-  LoresScalingMethod scaling_method_;   // Method used for scaling.
-  double blur_amount_;                  // Gaussian blur s.d. to apply.
   double scale_factor_;                 // target_resolution_ / resolution_.
-  mutable int32_t kernel_halfsize_;     // Kernel size is 2 * this + 1.
-  mutable L_KERNEL *gauss_kernel_;      // Gaussian blurring kernel.
-  mutable Pix* scaled_image_;           // Scaled full image.
+  static bool scaling_initialized_;     // Has the scaling been initialized?
+  static bool scaling_warning_;       // Have we warned about a scaling change?
+  static LoresScalingMethod scaling_method_;   // Method used for scaling.
+  static double blur_amount_;           // Gaussian blur s.d. to apply.
+  static int32_t kernel_halfsize_;      // Kernel size is 2 * this + 1.
+  static L_KERNEL *gauss_kernel_;       // Gaussian blurring kernel.
 };
 
 }  // namespace tesseract
