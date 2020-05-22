@@ -207,7 +207,8 @@ class ImageData {
   LoresImage* lores_;                // The lores image from which this image
                                      // data has been produced, if relevant.
   TBOX image_box_;                   // The box specifying the location of
-                                     // the image_data_ in the original pix_.
+                                     // the image_data_ in the original
+                                     // (hires) pix_.
   // TODO(jdg): need to include suitable rotation information for the
   // image_box_; at the moment, assuming it is all horizontal (0 rotation).
 };

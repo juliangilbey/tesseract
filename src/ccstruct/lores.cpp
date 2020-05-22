@@ -67,7 +67,7 @@
 #include "rect.h"        // for TBOX, ICOORD, FCOORD
 #include "serialis.h"    // for TFile
 #include "tprintf.h"     // for tprintf
-#include <cmath>         // for ceil
+#include <cmath>         // for abs, ceil
 #include <limits>        // for maximum int limit checking
 
 // Maximum scale factor to allow; beyond this probably means that there
@@ -566,6 +566,12 @@ LoresImage::LoresImage(Pix* image, int32_t resolution,
   wtarget_ = IntCastRounded(worig_ * scale_factor_);
   htarget_ = IntCastRounded(horig_ * scale_factor_);
 
+  InitializeScaling(scaling_method, blur);
+}
+
+void LoresImage::InitializeScaling(LoresScalingMethod scaling_method,
+                                   double blur)
+{
   if (!scaling_initialized_) {
     scaling_method_ = scaling_method;
     blur_amount_ = blur;
@@ -577,7 +583,8 @@ LoresImage::LoresImage(Pix* image, int32_t resolution,
     }
     scaling_initialized_ = true;
   } else if (!scaling_warning_ &&
-             (scaling_method != scaling_method_ || blur != blur_amount_)) {
+             (scaling_method != scaling_method_ ||
+              std::abs(blur - blur_amount_) > 1e-6)) {
       tprintf("Warning: new low-resolution image has specified different"
               "scaling parameters\n"
               "(method or blur amount) from the first image.\n"
@@ -678,10 +685,43 @@ bool LoresImage::DeSerialize(TFile* fp)
   if (!fp->DeSerialize(&wtarget_)) return false;
   if (!fp->DeSerialize(&htarget_)) return false;
   if (!fp->DeSerialize(&scale_factor_)) return false;
-  int32_t scaling_method;
-  if (!fp->DeSerialize(&scaling_method)) return false;
-  scaling_method_ = static_cast<LoresScalingMethod>(scaling_method);
-  return fp->DeSerialize(&blur_amount_);
+  int32_t scaling_method_int;
+  if (!fp->DeSerialize(&scaling_method_int)) return false;
+  LoresScalingMethod scaling_method =
+    static_cast<LoresScalingMethod>(scaling_method_int);
+  double blur;
+  if (!fp->DeSerialize(&blur)) return false;
+
+  // Check consistency of retrieved data
+  int32_t worig = pixGetWidth(image_);
+  int32_t horig = pixGetHeight(image_);
+  if (worig != worig_ || horig != horig_) {
+    tprintf("Deserialized lores image data has incorrectly stored "
+            "lores dimensions:\n"
+            "stored = (%ld, %ld), lores image size = (%ld, %ld)\n",
+            worig_, horig_, worig, horig);
+    return false;
+  }
+  double scale_factor = (double) target_resolution_ / resolution_;
+  if (std::abs((scale_factor - scale_factor_) / scale_factor) > 1e-6) {
+    tprintf("Deserialized lores image data has incorrectly stored "
+            "scale factor:\n"
+            "stored = %f, calculated scale factor = %f\n",
+            scale_factor_, scale_factor);
+    return false;
+  }
+  int32_t wtarget = IntCastRounded(worig_ * scale_factor_);
+  int32_t htarget = IntCastRounded(horig_ * scale_factor_);
+  if (wtarget != wtarget_ || htarget != htarget_) {
+    tprintf("Deserialized lores image data has incorrectly stored "
+            "target dimensions:\n"
+            "stored = (%ld, %ld), calculated = (%ld, %ld)\n",
+            wtarget_, htarget_, wtarget, htarget);
+    return false;
+  }
+
+  InitializeScaling(scaling_method, blur);
+  return true;
 }
 
 // As DeSerialize, but only seeks past the data - hence a static method.

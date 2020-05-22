@@ -89,9 +89,9 @@ class TFile;
 
 // Enum to store the method used to scale a LoresImage
 enum LoresScalingMethod {
-  LSM_BILINEAR,
-  LSM_BICUBIC,
-  LSM_BOX
+  LSM_BOX = 0,
+  LSM_BILINEAR = 1,
+  LSM_BICUBIC = 2
 };
 
 // Class to hold information on a single low-resolution greyscale image:
@@ -105,6 +105,9 @@ class LoresImage {
              LoresScalingMethod scaling_method, double blur);
   ~LoresImage();
   LoresImage(const LoresImage&);
+
+  static void InitializeScaling(LoresScalingMethod scaling_method,
+                                double blur);
 
   // Accessor functions
   LoresScalingMethod scaling_method() const {
