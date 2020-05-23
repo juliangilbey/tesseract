@@ -644,6 +644,12 @@ Pix* Tesseract::set_lores_image(Pix* image) {
   }
 
   int32_t lores_scaling = low_resolution_scaling;  // extract from params
+  if (lores_scaling < 0 || lores_scaling >= LSM_NONE) {
+    tprintf("Warning: low_resolution_scaling has invalid value!\n"
+	    "Use 0 (box), 1 (bilinear) or 2 (bicubic).\n"
+            "Giving up.\n");
+    return nullptr;
+  }
   lores_ = new LoresImage(image, low_resolution_dpi, user_defined_dpi,
                           LoresScalingMethod(lores_scaling),
                           low_resolution_blurring);

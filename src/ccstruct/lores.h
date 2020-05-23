@@ -91,7 +91,8 @@ class TFile;
 enum LoresScalingMethod {
   LSM_BOX = 0,
   LSM_BILINEAR = 1,
-  LSM_BICUBIC = 2
+  LSM_BICUBIC = 2,
+  LSM_NONE = 3                // we are not doing any lores scaling
 };
 
 // Class to hold information on a single low-resolution greyscale image:

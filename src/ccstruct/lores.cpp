@@ -585,11 +585,11 @@ void LoresImage::InitializeScaling(LoresScalingMethod scaling_method,
   } else if (!scaling_warning_ &&
              (scaling_method != scaling_method_ ||
               std::abs(blur - blur_amount_) > 1e-6)) {
-      tprintf("Warning: new low-resolution image has specified different"
+      tprintf("Warning: new low-resolution image has specified different "
               "scaling parameters\n"
               "(method or blur amount) from the first image.\n"
               "Ignoring new method.\n"
-              "(This has probably arisen from using lstmf files from two"
+              "(This has probably arisen from using lstmf files from two "
               "different\n"
               "sets of training.)\n");
       scaling_warning_ = true;
@@ -764,14 +764,17 @@ Pix* LoresImage::GetScaledImageBox(int32_t target_height, const TBOX& box) const
 
   float overshoot;
   switch (scaling_method_) {
+  case LSM_BOX:
+    overshoot = 0;
+    break;
   case LSM_BILINEAR:
     overshoot = 1;
     break;
   case LSM_BICUBIC:
     overshoot = 2;
     break;
-  case LSM_BOX:
-    overshoot = 0;
+  default:
+    // LSM_NONE can't happen, but this will stop a compiler warning
     break;
   }
 

@@ -619,6 +619,7 @@ void TessBaseAPI::SetImage(Pix* pix) {
 	pixDestroy(&scaled_image);
       }
     } else {
+      LoresImage::InitializeScaling(LSM_NONE, 0);
       thresholder_->SetImage(pix);
       SetInputImage(thresholder_->GetPixRect());
     }

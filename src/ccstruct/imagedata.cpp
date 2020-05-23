@@ -134,6 +134,8 @@ ImageData::ImageData(bool vertical, Pix* pix, LoresImage *lores,
   SetPix(pix);
   if (lores)
     lores_ = new LoresImage(*lores);
+  else
+    LoresImage::InitializeScaling(LSM_NONE, 0);
 }
 ImageData::~ImageData() {
 }
@@ -216,6 +218,7 @@ bool ImageData::DeSerialize(TFile* fp) {
     if (lores_)
       delete lores_;
     lores_ = nullptr;
+    LoresImage::InitializeScaling(LSM_NONE, 0);
   }
   return true;
 }
