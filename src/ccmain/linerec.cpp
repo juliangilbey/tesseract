@@ -167,6 +167,17 @@ ImageData* Tesseract::GetLineData(const TBOX& line_box,
 // is set in the returned ImageData if the text was originally vertical, which
 // can be used to invoke a different CJK recognition engine. The revised_box
 // is also returned to enable calculation of output bounding boxes.
+//
+// (jdg) As the box is relative to the BestPix() image, it is
+// plausible in the case that we have a lores image that this itself
+// has been generated from a subrectangle of the original lores image,
+// for example via loading an lstmf file in lstmtraining.  But this
+// never actually happens: the lstmtraining code uses the whole image
+// stored in the lstmf file.  (This function is only called from
+// GetLineData, which is only used for lstm.train to generate lstmf
+// files, and from LSTMRecognizeWord, which is used for recognition on
+// a line from a whole input image.)  So we don't need to handle this
+// possibility.
 ImageData* Tesseract::GetRectImage(const TBOX& box, const BLOCK& block,
                                    int padding, TBOX* revised_box) const {
   TBOX wbox = box;
