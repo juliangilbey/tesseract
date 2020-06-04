@@ -831,8 +831,8 @@ Pix* LoresImage::GetScaledImageBox(int32_t target_height, const TBOX& box) const
   // than we have available.  (One pixel difference should have little
   // impact on the recognition results.)
 
-  int left = int(overshoot * scaling - (ulx - ulx0));
-  int top = int(overshoot * scaling - (uly - uly0));
+  int left = int((overshoot - (ulx - ulx0)) * scaling);
+  int top = int((overshoot - (uly - uly0)) * scaling);
 
   Box *boxtemp = boxCreateValid(left, top, target_width, target_height);
   if (!boxtemp) {
