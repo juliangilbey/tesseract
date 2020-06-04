@@ -788,14 +788,14 @@ Pix* LoresImage::GetScaledImageBox(int32_t target_height, const TBOX& box) const
   // compare this with the Tesseract::GetRectImage function in linerec.cpp;
   // note, though, that our rescale function above requires the coordinates
   // of the bounding box rather than its width and height.
-  float ulx0 = box.left() / scale_factor_ - overshoot;
-  float uly0 = (htarget_ - box.top()) / scale_factor_ - overshoot;
-  float lrx0 = box.right() / scale_factor_ + overshoot;
-  float lry0 = (htarget_ - box.bottom()) / scale_factor_ + overshoot;
+  float ulx0 = float(box.left()) / scale_factor_ - overshoot;
+  float uly0 = float(htarget_ - box.top()) / scale_factor_ - overshoot;
+  float lrx0 = float(box.right()) / scale_factor_ + overshoot;
+  float lry0 = float(htarget_ - box.bottom()) / scale_factor_ + overshoot;
   float ulx = std::max(ulx0, 0.0f);
   float uly = std::max(uly0, 0.0f);
-  float lrx = std::min(lrx0, static_cast<float>(worig_));
-  float lry = std::min(lry0, static_cast<float>(horig_));
+  float lrx = std::min(lrx0, float(worig_));
+  float lry = std::min(lry0, float(horig_));
   
   float scaling = scale_factor_ * target_height / box.height();
   if (scaling > kMaxScale) {
@@ -803,8 +803,7 @@ Pix* LoresImage::GetScaledImageBox(int32_t target_height, const TBOX& box) const
     return nullptr;
   }
 
-  float image_ratio = float(box.right() - box.left()) /
-                        (box.top() - box.bottom());
+  float image_ratio = float(box.width()) / box.height();
   int target_width = IntCastRounded(target_height * image_ratio);
   int xsize_over = IntCastRounded(scaling * (lrx - ulx));
   int ysize_over = IntCastRounded(scaling * (lry - uly));
