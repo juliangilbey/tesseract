@@ -797,14 +797,14 @@ Pix* LoresImage::GetScaledImageBox(int32_t target_height, const TBOX& box) const
   float lrx = std::min(lrx0, float(worig_));
   float lry = std::min(lry0, float(horig_));
   
-  float scaling = scale_factor_ * target_height / box.height();
+  float factor = float(target_height) / box.height();
+  float scaling = scale_factor_ * factor;
   if (scaling > kMaxScale) {
     tprintf("scaling factor %g too large\n", scaling);
     return nullptr;
   }
 
-  float image_ratio = float(box.width()) / box.height();
-  int target_width = IntCastRounded(target_height * image_ratio);
+  int target_width = IntCastRounded(float(box.width()) * factor);
   int xsize_over = IntCastRounded(scaling * (lrx - ulx));
   int ysize_over = IntCastRounded(scaling * (lry - uly));
   
@@ -818,9 +818,23 @@ Pix* LoresImage::GetScaledImageBox(int32_t target_height, const TBOX& box) const
   }
 
   if (blur_amount_ > 0) {
-    Pix *pixblur = pixConvolve(pixtemp, gauss_kernel_, 8, 1);
-    pixDestroy(&pixtemp);
-    pixtemp = pixblur;
+    // If the scale factor is close to 1, we use the pre-stored
+    // gaussian kernel, otherwise we create a scaled version, as the
+    // blur should be relative to fully-scaled image
+    if (std::abs(factor - 1.0) < 0.1) {
+      Pix *pixblur = pixConvolve(pixtemp, gauss_kernel_, 8, 1);
+      pixDestroy(&pixtemp);
+      pixtemp = pixblur;
+    } else {
+      int32_t kernel_halfsize = IntCastRounded(4 * blur_amount_ * factor);
+      L_KERNEL *gauss_kernel = makeGaussianKernel(
+				   kernel_halfsize, kernel_halfsize,
+				   blur_amount_ * factor, 1.0);
+      Pix *pixblur = pixConvolve(pixtemp, gauss_kernel, 8, 1);
+      kernelDestroy(&gauss_kernel);
+      pixDestroy(&pixtemp);
+      pixtemp = pixblur;
+    }
   }
 
   // Now the pixtemp is the rescaled image with some overshoot.
