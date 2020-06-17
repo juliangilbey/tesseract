@@ -762,6 +762,15 @@ Pix* LoresImage::GetScaledImageBox(int32_t target_height, const TBOX& box) const
   // method and blurring, to avoid edge effects.
   // Note that overshoot is measured in lores image pixels.
 
+  // Sanity check: if we are asked to find an image box for a rotated
+  // rectangle, so one of the coordinates is negative, we give up.
+  // At a later stage, we might fix this, but it is low priority.
+  if (box.left() < 0 || box.right() < 0 || box.top() < 0 || box.bottom() < 0 ||
+      box.left() > box.right() || box.top() < box.bottom()) {
+    tprintf("LoresImage::GetScaledImageBox() called with invalid box\n");
+    return nullptr;
+  }
+
   float overshoot;
   switch (scaling_method_) {
   case LSM_BOX:

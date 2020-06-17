@@ -232,8 +232,11 @@ ImageData* Tesseract::GetRectImage(const TBOX& box, const BLOCK& block,
       vertical_text = true;
   }
   // TODO (jdg): This currently makes no attempt to handle any block
-  // rotations necessary if lores_ is subsequently used.  If this works
-  // well for horizontal text, then we will consider fixing this.
+  // rotations necessary if lores_ is subsequently used.  This causes
+  // problems on some images where the text is regarded as being
+  // vertical, but we will live with that for now, as even fixing that
+  // will not produce better results, as the text is horizontal, not
+  // vertical.
   return new ImageData(vertical_text, box_pix, lores_, *revised_box);
 }
 
