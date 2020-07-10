@@ -1092,6 +1092,7 @@ class Tesseract : public Wordrec {
             "character. ");
   BOOL_VAR_H(pageseg_apply_music_mask, true,
              "Detect music staff and remove intersecting components");
+  BOOL_VAR_H(lstm_dump_softmax, false, "Dump LSTM softmax output layer");
   BOOL_VAR_H(low_resolution_input, false,
              "The input image is low resolution (lores)");
   INT_VAR_H(low_resolution_dpi, 0,

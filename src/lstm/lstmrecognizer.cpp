@@ -35,6 +35,7 @@
 #include "pageres.h"
 #include "ratngs.h"
 #include "recodebeam.h"
+#include "rect.h"
 #include "scrollview.h"
 #include "statistc.h"
 #include "tprintf.h"
@@ -185,13 +186,20 @@ void LSTMRecognizer::RecognizeLine(const ImageData& image_data, bool invert,
                                    bool debug, double worst_dict_cert,
                                    const TBOX& line_box,
                                    PointerVector<WERD_RES>* words,
-                                   int lstm_choice_mode) {
+                                   int lstm_choice_mode,
+                                   bool lstm_dump_softmax) {
   NetworkIO outputs;
   float scale_factor;
   NetworkIO inputs;
   if (!RecognizeLine(image_data, invert, debug, false, false, &scale_factor,
                      &inputs, &outputs))
     return;
+  if (lstm_dump_softmax) {
+    tprintf("DUMP: rect: ul = (%d, %d), lr = (%d, %d)\n",
+            line_box.left(), line_box.top(),
+            line_box.right(), line_box.bottom());
+    DumpSoftmax(outputs);
+  }
   if (search_ == nullptr) {
     search_ =
         new RecodeBeamSearch(recoder_, null_char_, SimpleTextOutput(), dict_);
@@ -525,6 +533,50 @@ const char* LSTMRecognizer::DecodeSingleLabel(int label) {
   }
   if (label == UNICHAR_SPACE) return " ";
   return GetUnicharset().get_normed_unichar(label);
+}
+
+// Dumps the network output as a sequence of labels with scores, using
+// the simple character model (each position is a char, and the null_char_ is
+// mainly intended for tail padding); all possible labels are output,
+// not only the best ones.
+void LSTMRecognizer::DumpSoftmax(const NetworkIO& output) {
+  int c;
+  const int width = output.Width();
+  const int numchar = output.NumFeatures();
+  char const* labels[numchar];
+  for (c = 0; c < numchar; ++c) {
+    // Taken from DecodeSingleLabel
+    int label = c;
+    if (label == null_char_) {
+      labels[c] = "<null>";
+      continue;
+    }
+    if (IsRecoding()) {
+      // Decode label via recoder_.
+      RecodedCharID code;
+      code.Set(0, label);
+      label = recoder_.DecodeUnichar(code);
+      if (label == INVALID_UNICHAR_ID) {
+        labels[c] = "..";  // Part of a bigger code.
+        continue;
+      }
+    }
+    if (label == UNICHAR_SPACE)
+      labels[c] = " ";
+    else
+      labels[c] = GetUnicharset().get_normed_unichar(label);
+  }
+
+  for (int t = 0; t < width; ++t) {
+    tprintf("  Time step %d:\n", t);
+    const float* probs = output.f(t);
+    for (int c = 0; c < numchar; ++c) {
+      float prob = probs[c];
+      float cert = NetworkIO::ProbToCertainty(prob);
+      tprintf("    charnum=%d char=\"%s\" prob=%g cert=%f\n",
+              c, labels[c], prob, cert);
+    }
+  }
 }
 
 }  // namespace tesseract.

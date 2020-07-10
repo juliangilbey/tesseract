@@ -176,7 +176,8 @@ class LSTMRecognizer {
   // will be used in a dictionary word.
   void RecognizeLine(const ImageData& image_data, bool invert, bool debug,
                      double worst_dict_cert, const TBOX& line_box,
-                     PointerVector<WERD_RES>* words, int lstm_choice_mode = 0);
+                     PointerVector<WERD_RES>* words, int lstm_choice_mode = 0,
+		     bool lstm_dump_softmax = false);
 
   // Helper computes min and mean best results in the output.
   void OutputStats(const NetworkIO& outputs, float* min_output,
@@ -253,6 +254,12 @@ class LSTMRecognizer {
   // Returns a string corresponding to a given single label id, falling back to
   // a default of ".." for part of a multi-label unichar-id.
   const char* DecodeSingleLabel(int label);
+
+  // Dumps the network output as a sequence of labels with scores, using
+  // the simple character model (each position is a char, and the null_char_ is
+  // mainly intended for tail padding); all possible labels are output,
+  // not only the best ones.
+  void DumpSoftmax(const NetworkIO& output);
 
  protected:
   // The network hierarchy.

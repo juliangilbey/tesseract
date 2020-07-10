@@ -515,6 +515,8 @@ Tesseract::Tesseract()
           this->params()),
       BOOL_MEMBER(pageseg_apply_music_mask, true,
                 "Detect music staff and remove intersecting components", this->params()),
+      BOOL_MEMBER(lstm_dump_softmax, false, "Dump LSTM softmax output layer",
+		  this->params()),
       BOOL_MEMBER(low_resolution_input, false,
                   "The input image is low resolution (lores)", this->params()),
       INT_MEMBER(low_resolution_dpi, 0,
