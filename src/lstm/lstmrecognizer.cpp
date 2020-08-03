@@ -39,6 +39,8 @@
 #include "scrollview.h"
 #include "statistc.h"
 #include "tprintf.h"
+#include <fstream>
+#include <iostream>
 
 namespace tesseract {
 
@@ -186,6 +188,7 @@ void LSTMRecognizer::RecognizeLine(const ImageData& image_data, bool invert,
                                    bool debug, double worst_dict_cert,
                                    const TBOX& line_box,
                                    PointerVector<WERD_RES>* words,
+                                   std::fstream &fout,
                                    int lstm_choice_mode,
                                    bool lstm_dump_softmax) {
   NetworkIO outputs;
@@ -195,10 +198,8 @@ void LSTMRecognizer::RecognizeLine(const ImageData& image_data, bool invert,
                      &inputs, &outputs))
     return;
   if (lstm_dump_softmax) {
-    tprintf("DUMP: rect: ul = (%d, %d), lr = (%d, %d)\n",
-            line_box.left(), line_box.top(),
-            line_box.right(), line_box.bottom());
-    DumpSoftmax(outputs);
+    //DumpSoftmax(outputs);
+    SoftmaxToFile(outputs, fout);
   }
   if (search_ == nullptr) {
     search_ =
@@ -576,6 +577,47 @@ void LSTMRecognizer::DumpSoftmax(const NetworkIO& output) {
       tprintf("    charnum=%d char=\"%s\" prob=%g cert=%f\n",
               c, labels[c], prob, cert);
     }
+  }
+}
+
+void LSTMRecognizer::SoftmaxToFile(const NetworkIO& output, std::fstream &fout) {
+  int c;
+  const int width = output.Width();
+  const int numchar = output.NumFeatures();
+  char const* labels[numchar];
+  for (c = 0; c < numchar; ++c) {
+    // Taken from DecodeSingleLabel
+    int label = c;
+    if (label == null_char_) {
+      labels[c] = "<null>";
+      continue;
+    }
+    if (IsRecoding()) {
+      // Decode label via recoder_.
+      RecodedCharID code;
+      code.Set(0, label);
+      label = recoder_.DecodeUnichar(code);
+      if (label == INVALID_UNICHAR_ID) {
+        labels[c] = "..";  // Part of a bigger code.
+        continue;
+      }
+    }
+    if (label == UNICHAR_SPACE)
+      labels[c] = " ";
+    else
+      labels[c] = GetUnicharset().get_normed_unichar(label);
+  }
+  // write labels first line
+  std::fstream header("../header.txt", std::ios::out | std::ios::trunc);
+  for (int i = 0; i < numchar; i++) {
+    header << labels[i] << std::endl;
+  }
+  header.close();
+
+  // write outputs
+  for (int t = 0; t < width; ++t) {
+    const float* probs = output.f(t);
+    fout.write((char *) probs, numchar * sizeof(float));
   }
 }
 

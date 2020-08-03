@@ -20,6 +20,7 @@
 #define TESSERACT_LSTM_LSTMRECOGNIZER_H_
 
 #include "ccutil.h"
+#include <fstream>
 #include "helpers.h"
 #include "imagedata.h"
 #include "matrix.h"
@@ -176,7 +177,9 @@ class LSTMRecognizer {
   // will be used in a dictionary word.
   void RecognizeLine(const ImageData& image_data, bool invert, bool debug,
                      double worst_dict_cert, const TBOX& line_box,
-                     PointerVector<WERD_RES>* words, int lstm_choice_mode = 0,
+                     PointerVector<WERD_RES>* words,
+                     std::fstream &fout,
+                     int lstm_choice_mode = 0,
 		     bool lstm_dump_softmax = false);
 
   // Helper computes min and mean best results in the output.
@@ -260,6 +263,7 @@ class LSTMRecognizer {
   // mainly intended for tail padding); all possible labels are output,
   // not only the best ones.
   void DumpSoftmax(const NetworkIO& output);
+  void SoftmaxToFile(const NetworkIO& output, std::fstream &fout);
 
  protected:
   // The network hierarchy.
